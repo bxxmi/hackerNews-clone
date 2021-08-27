@@ -125,40 +125,48 @@ var container = document.getElementById('root');
 var ajax = new XMLHttpRequest();
 var content = document.createElement('div');
 var NEWS_URL = 'https://api.hnpwa.com/v0/news/1.json';
-var CONTENT_URL = 'https://api.hnpwa.com/v0/item/@id.json'; // open('데이터를 가져오는 방식: GET or POST', '가져올 데이터 주소', 비동기 통신 여부: true or false ...)
+var CONTENT_URL = 'https://api.hnpwa.com/v0/item/@id.json'; // API 데이터 가져오는 함수
 
-ajax.open('GET', NEWS_URL, false); // send() 함수: 실질적으로 데이터를 가져옴
-
-ajax.send(); // 가져온 데이터는 response에 담김
-// console.log(ajax.response);
-// JSON.parse(): 응답 값 객체로 변환
-// 📌 단, 객체로 변환이 가능한 것은 데이터 타입이 JSON일 경우이다. 
-
-var newsFeed = JSON.parse(ajax.response);
-var ul = document.createElement('ul'); // hashchange: 같은 페이지 안에서 id값이 변경되는 이벤트
-
-window.addEventListener('hashchange', function () {
-  // location: 주소와 관련된 다양한 정보 제공
-  var id = location.hash.substr(1);
-  ajax.open('GET', CONTENT_URL.replace('@id', id), false);
+function getData(url) {
+  ajax.open('GET', url, false);
   ajax.send();
-  var newsContent = JSON.parse(ajax.response);
-  var title = document.createElement('h1');
-  title.innerHTML = newsContent.title;
-  content.appendChild(title);
-});
+  return JSON.parse(ajax.response);
+} // 뉴스 목록 리스트 함수
 
-for (var i = 0; i < 10; i++) {
-  var li = document.createElement('li');
-  var a = document.createElement('a');
-  a.href = "#".concat(newsFeed[i].id);
-  a.innerHTML = "".concat(newsFeed[i].title, " (").concat(newsFeed[i].comments_count, ")");
-  li.appendChild(a);
-  ul.appendChild(li);
+
+function newsFeed() {
+  var newsFeed = getData(NEWS_URL);
+  var newsList = [];
+  newsList.push('<ul>');
+
+  for (var i = 0; i < 10; i++) {
+    newsList.push("\n    <li>\n      <a href=\"#".concat(newsFeed[i].id, "\">\n        ").concat(newsFeed[i].title, " (").concat(newsFeed[i].comments_count, ") \n      </a>\n    </li>"));
+  }
+
+  newsList.push('</ul>');
+  container.innerHTML = newsList.join('');
+} // 뉴스 내용 함수
+
+
+function newsDetail() {
+  var id = location.hash.substr(1);
+  var newsContent = getData(CONTENT_URL.replace('@id', id));
+  container.innerHTML = "\n  <h1>".concat(newsContent.title, "</h1>\n\n  <div>\n    <a href=\"#\">\uBAA9\uB85D</a>\n  </div>\n  ");
+} // 화면 전환 담당
+
+
+function router() {
+  var routePath = location.hash;
+
+  if (routePath === '') {
+    newsFeed();
+  } else {
+    newsDetail();
+  }
 }
 
-container.appendChild(ul);
-container.appendChild(content);
+window.addEventListener('hashchange', router);
+router();
 },{}],"../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
@@ -187,7 +195,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50781" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63155" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
