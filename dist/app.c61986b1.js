@@ -135,8 +135,62 @@ function getData(url) {
   ajax.open('GET', url, false);
   ajax.send();
   return JSON.parse(ajax.response);
-} // 글 읽음 처리 함수
+} // mixin 기법을 사용하는 이유
+// 타겟클래스에다가 베이스클래스의 기능들을 합성시키는 것 
+// 1. 기존 extends 방식은 코드에 적시되어야하는 상속방법이다.
+// 즉, 상속 관계를 바꾸고 싶다면 코드 전체를 바꿔야한다. (코드 유연성 부족)
+// 2. 기존 class extends는 다중 상속을 지원하지 않는다.
 
+
+function applyApiMixins(targetClass, baseClasses) {
+  baseClasses.forEach(function (baseClass) {
+    Object.getOwnPropertyNames(baseClass.prototype).forEach(function (name) {
+      var descriptor = Object.getOwnPropertyDescriptor(baseClass.prototype, name);
+
+      if (descriptor) {
+        Object.defineProperty(targetClass.prototype, name, descriptor);
+      }
+    });
+  });
+}
+
+var Api = function () {
+  function Api() {}
+
+  Api.prototype.getRequest = function (url) {
+    var ajax = new XMLHttpRequest();
+    ajax.open('GET', url, false);
+    ajax.send();
+    return JSON.parse(ajax.response);
+  };
+
+  return Api;
+}();
+
+var NewsFeedApi = function () {
+  function NewsFeedApi() {}
+
+  NewsFeedApi.prototype.getData = function () {
+    return this.getRequest(NEWS_URL);
+  };
+
+  return NewsFeedApi;
+}();
+
+var NewsDetailApi = function () {
+  function NewsDetailApi() {}
+
+  NewsDetailApi.prototype.getData = function (id) {
+    return this.getRequest(CONTENT_URL.replace('@id', id));
+  };
+
+  return NewsDetailApi;
+}();
+
+;
+;
+applyApiMixins(NewsFeedApi, [Api]);
+applyApiMixins(NewsDetailApi, [Api]); // 글 읽음 처리 함수
 
 function makeFeeds(feeds) {
   for (var i = 0; i < feeds.length; i++) {
@@ -145,6 +199,7 @@ function makeFeeds(feeds) {
 
   return feeds;
 } // 타입 가드(=null chk)
+// 리턴 값이 없을 때는 void 사용
 
 
 function updateView(html) {
@@ -157,12 +212,13 @@ function updateView(html) {
 
 
 function newsFeed() {
+  var api = new NewsFeedApi();
   var newsFeed = store.feeds;
   var newsList = [];
   var template = "\n  <div class=\"bg-gray-600 min-h-screen\">\n    <div class=\"bg-white text-xl\">\n      <div class=\"mx-auto px-4\">\n        <div class=\"flex justify-between items-center py-6\">\n          <div class=\"flex justify-start\">\n            <h1 class=\"font-extrabold\">Hacker News</h1>\n          </div>\n          <div class=\"items-center justify-end\">\n            <a href=\"#/page/{{__prev_page__}}\" class=\"text-gray-500\">\n              Previous\n            </a>\n            <a href=\"#/page/{{__next_page__}}\" class=\"text-gray-500 ml-4\">\n              Next\n            </a>\n          </div>\n        </div> \n      </div>\n    </div>\n    <div class=\"p-4 text-2xl text-gray-700\">\n      {{__news_feed__}}        \n    </div>\n  </div>\n  ";
 
   if (newsFeed.length === 0) {
-    newsFeed = store.feeds = makeFeeds(getData(NEWS_URL));
+    newsFeed = store.feeds = makeFeeds(api.getData());
   }
 
   for (var i = (store.currentPage - 1) * 10; i < store.currentPage * 10; i++) {
@@ -170,16 +226,17 @@ function newsFeed() {
   }
 
   template = template.replace('{{__news_feed__}}', newsList.join(''));
-  template = template.replace('{{__prev_page__}}', store.currentPage > 1 ? store.currentPage - 1 : 1);
-  template = template.replace('{{__next_page__}}', store.currentPage + 1);
+  template = template.replace('{{__prev_page__}}', String(store.currentPage > 1 ? store.currentPage - 1 : 1));
+  template = template.replace('{{__next_page__}}', String(store.currentPage + 1));
   updateView(template);
 } // 뉴스 내용 함수
 
 
 function newsDetail() {
+  var api = new NewsDetailApi();
   var id = location.hash.substr(7);
-  var newsContent = getData(CONTENT_URL.replace('@id', id));
-  var template = "\n  <div class=\"bg-gray-600 min-h-screen pb-8\">\n      <div class=\"bg-white text-xl\">\n        <div class=\"mx-auto px-4\">\n          <div class=\"flex justify-between items-center py-6\">\n            <div class=\"flex justify-start\">\n              <h1 class=\"font-extrabold\">Hacker News</h1>\n            </div>\n            <div class=\"items-center justify-end\">\n              <a href=\"#/page/" + store.currentPage + "\" class=\"text-gray-500\">\n                <i class=\"fa fa-times\"></i>\n              </a>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <div class=\"h-full border rounded-xl bg-white m-6 p-4 \">\n        <h2>" + newsContent.title + "</h2>\n        <div class=\"text-gray-400 h-20\">\n          " + newsContent.content + "\n        </div>\n\n        {{__comments__}}\n\n      </div>\n    </div>\n  ";
+  var newsDetail = api.getData(id);
+  var template = "\n  <div class=\"bg-gray-600 min-h-screen pb-8\">\n      <div class=\"bg-white text-xl\">\n        <div class=\"mx-auto px-4\">\n          <div class=\"flex justify-between items-center py-6\">\n            <div class=\"flex justify-start\">\n              <h1 class=\"font-extrabold\">Hacker News</h1>\n            </div>\n            <div class=\"items-center justify-end\">\n              <a href=\"#/page/" + store.currentPage + "\" class=\"text-gray-500\">\n                <i class=\"fa fa-times\"></i>\n              </a>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      <div class=\"h-full border rounded-xl bg-white m-6 p-4 \">\n        <h2>" + newsDetail.title + "</h2>\n        <div class=\"text-gray-400 h-20\">\n          " + newsDetail.content + "\n        </div>\n\n        {{__comments__}}\n\n      </div>\n    </div>\n  ";
 
   for (var i = 0; i < store.feeds.length; i++) {
     if (store.feeds[i].id === Number(id)) {
@@ -188,25 +245,22 @@ function newsDetail() {
     }
   }
 
-  function makeComment(comments, called) {
-    if (called === void 0) {
-      called = 0;
+  updateView(template.replace('{{__comments__}}', makeComment(newsDetail.comments)));
+}
+
+function makeComment(comments) {
+  var commentString = [];
+
+  for (var i = 0; i < comments.length; i++) {
+    var comment = comments[i];
+    commentString.push("\n      <div style=\"padding-left: " + comment.level * 40 + "px;\" class=\"mt-4\">\n          <div class=\"text-gray-400\">\n            <i class=\"fa fa-sort-up mr-2\"></i>\n            <strong>" + comment.user + "</strong> " + comment.time_ago + "\n          </div>\n          <p class=\"text-gray-700\">" + comment.content + "</p>\n        </div>      \n      "); // 재귀 호출
+
+    if (comment.comments.length > 0) {
+      commentString.push(makeComment(comment.comments));
     }
-
-    var commentString = [];
-
-    for (var i = 0; i < comments.length; i++) {
-      commentString.push("\n      <div style=\"padding-left: " + called * 40 + "px;\" class=\"mt-4\">\n          <div class=\"text-gray-400\">\n            <i class=\"fa fa-sort-up mr-2\"></i>\n            <strong>" + comments[i].user + "</strong> " + comments[i].time_ago + "\n          </div>\n          <p class=\"text-gray-700\">" + comments[i].content + "</p>\n        </div>      \n      "); // 재귀 호출
-
-      if (comments[i].comments.length > 0) {
-        commentString.push(makeComment(comments[i].comments, called + 1));
-      }
-    }
-
-    return commentString.join('');
   }
 
-  updateView(template.replace('{{__comments__}}', makeComment(newsContent.comments)));
+  return commentString.join('');
 } // 화면 전환 담당
 
 
@@ -253,7 +307,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "54015" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60713" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
