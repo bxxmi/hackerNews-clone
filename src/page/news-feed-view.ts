@@ -39,7 +39,7 @@ export default class NewsFeedView extends View {
     this.api = new NewsFeedApi(NEWS_URL);
   }
 
-  render = async (page: string = '1'): Promise<void> => {
+  async render(page: string = '1'): Promise<void> {
     this.store.currentPage = Number(page);
 
     if (!this.store.hasFeeds) {

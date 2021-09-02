@@ -1,11 +1,9 @@
 import { NewsFeed, NewsDetail } from '../types';
 
 export default class Api {
-  xhr: XMLHttpRequest;
   url: string;
 
   constructor(url: string) {
-    this.xhr = new XMLHttpRequest();
     this.url = url;
   }
 

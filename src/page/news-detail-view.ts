@@ -38,8 +38,8 @@ export default class NewsDetailView extends View {
     this.store = store;
   }
 
-  render = async (id: string): Promise<void> => {
-    const api = new NewsDetailApi(CONTENT_URL.replace('@id', id));
+  async render(id: string): Promise<void> {
+    const api = new NewsDetailApi(id);
     
     const { title, content, comments } = await api.getData();
 
@@ -47,12 +47,12 @@ export default class NewsDetailView extends View {
     this.setTemplateData('currentPage', this.store.currentPage.toString());
     this.setTemplateData('title', title);
     this.setTemplateData('content', content);
-    this.setTemplateData('comments', this.makeComment(comments));
+    this.setTemplateData('comments', this.renderComment(comments));
   
     this.updateView();
   }
 
-    private makeComment(comments: NewsComment[]): string {
+    private renderComment(comments: NewsComment[]): string {
     for(let i = 0; i < comments.length; i++) {
       const comment: NewsComment = comments[i];
 
@@ -67,7 +67,7 @@ export default class NewsDetailView extends View {
       `);
   
       if (comment.comments.length > 0) {
-        this.addHtml(this.makeComment(comment.comments));
+        this.addHtml(this.renderComment(comment.comments));
       }
     }
   
